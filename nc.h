@@ -25,6 +25,9 @@ char *get_readable_size(int size, char *buffer);
 int is_directory(const char *path);
 void get_filenames(void);
 void handle_return_key(void);
+#ifndef ALLOW_DELETE
+void handle_delete_key(void);
+#endif
 void handle_keydown(SDLKey key);
 
 #endif

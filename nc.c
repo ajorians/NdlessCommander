@@ -21,13 +21,13 @@ void init(void) {
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
-	font_b = nSDL_LoadFont(NSDL_FONT_TINYTYPE, SDL_MapRGB(screen->format, 0, 0, 0), NSDL_FONTCFG_DEFAULT);
+	font_b = nSDL_LoadFont(NSDL_FONT_TINYTYPE, 0, 0, 0);
 	if (font_b == NULL) {
 		printf("Couldn't load font\n");
 		SDL_Quit();
 		exit(EXIT_FAILURE);
 	}
-	font_w = nSDL_LoadFont(NSDL_FONT_TINYTYPE, SDL_MapRGB(screen->format, 255, 255, 255), NSDL_FONTCFG_DEFAULT);
+	font_w = nSDL_LoadFont(NSDL_FONT_TINYTYPE, 255, 255, 255);
 	if (font_w == NULL) {
 		printf("Couldn't load font\n");
 		nSDL_FreeFont(font_b);
@@ -87,7 +87,7 @@ void draw_filenames(void) {
 	rect.h = 8;
 	get_filenames();
 	for (i = file_scroll; i < num_files && i < file_scroll + NUM_ITEMS_SHOWN; ++i) {
-		nSDL_DrawStringInRect(screen, font_b, &rect, filenames[i]);
+		nSDL_DrawString(screen, font_b, rect.x, rect.y, filenames[i]);
 		if (strcmp(filenames[i], ".") != 0
 		 && strcmp(filenames[i], "..") != 0
 		 && is_directory(filenames[i]))
@@ -124,7 +124,7 @@ void draw_file_info(void) {
 				file_content[i] = c;
 				++i;
 			} while (c != EOF && i + 1 < BUF_SIZE);
-			nSDL_DrawStringInRect(screen, font_b, &rect, file_content);
+			nSDL_DrawString(screen, font_b, rect.x, rect.y, file_content);
 			fclose(fp);
 		}
 	} else {
@@ -186,6 +186,49 @@ void handle_return_key(void) {
 	}
 }
 
+#ifdef ALLOW_DELETE
+#define NO_DELETE		1
+#define YES_DELETE		2
+#ifdef DEBUG
+#define DEBUG_MSG		printf
+#else
+#define DEBUG_MSG(x,...)	(void)0
+#endif
+void handle_delete_key(void) {
+	DEBUG_MSG("Handling the delete key\n");
+	char path[128], name[128];
+	NU_Current_Dir("A:", (char*)path);
+	strcpy(name, filenames[file_choice]);
+	if( strcmp(name, ".") == 0 || strcmp(name, "..") == 0 )
+		return;
+	strcat(path, name);
+	DEBUG_MSG("Handle delete %s\n", path);
+        int nResult = show_msgbox_2b("Delete", "Are you sure you want to delete?", "No", "Yes");
+	DEBUG_MSG("nResult: %d\n", nResult);
+
+	if( nResult == YES_DELETE ) {
+		if(is_directory(path)) {
+			DEBUG_MSG("Is a directory\n");
+			//Won't work if it isn't empty; maybe I could display a message?
+			nSDL_DrawString(screen, font_w, 312 - nSDL_GetStringWidth(font_w, "Deleting..."), 224, "Deleting...");
+#ifdef DEBUG
+			int nRet = 
+#endif
+				rmdir(path);
+			DEBUG_MSG("Result is %d\n", nRet);
+		} else {
+			DEBUG_MSG("Is a file\n");
+			nSDL_DrawString(screen, font_w, 312 - nSDL_GetStringWidth(font_w, "Deleting..."), 224, "Deleting...");
+#ifdef DEBUG
+			int nRet = 
+#endif
+				remove(path);
+			DEBUG_MSG("Result is %d\n", nRet);
+		}
+	}
+}
+#endif
+
 void handle_tab_key(void) {
 	char buffer[BUF_SIZE] = {'\0'};
 	nSDL_DrawString(screen, font_w, 312 - nSDL_GetStringWidth(font_w, "Copying..."), 224, "Copying...");
@@ -243,6 +286,11 @@ void handle_keydown(SDLKey key) {
 		case SDLK_RETURN:
 			handle_return_key();
 			break;
+#ifdef ALLOW_DELETE
+		case SDLK_BACKSPACE:
+			handle_delete_key();
+			break;
+#endif
 		case SDLK_TAB:
 			handle_tab_key();
 			break;
