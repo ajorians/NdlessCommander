@@ -1,23 +1,34 @@
-SOURCES = nc.c
-TARGET = NC.tns
-OBJECTS = $(SOURCES:.c=.o)
-
 CC = nspire-gcc
 LD = nspire-ld
+GENZEHN = genzehn
+
+SOURCES = nc.c
+EXE = NC
+OBJECTS = $(SOURCES:.c=.o)
+
 OBJCOPY = arm-none-eabi-objcopy
 CFLAGS = -Wall -Wextra -Ofast -DALLOW_DELETE
 #CFLAGS = -Wall -Wextra -Ofast
 LDFLAGS =
 LIBS = -lSDL
+DISTDIR = .
 
-all: $(TARGET)
+all: $(EXE).prg.tns
 
-$(TARGET): $(OBJECTS)
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $(@:.tns=.elf)
-	$(OBJCOPY) -O binary $(@:.tns=.elf) $(TARGET)
-
-.c.o:
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(EXE).elf: $(OBJECTS)
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $(DISTDIR)/$@
+
+$(EXE).tns: $(EXE).elf
+	$(GENZEHN) --input $(DISTDIR)/$^ --output $(DISTDIR)/$@ $(ZEHNFLAGS)
+
+$(EXE).prg.tns: $(EXE).tns
+	make-prg $(DISTDIR)/$^ $(DISTDIR)/$@
+
 clean:
-	rm -f $(OBJECTS) $(TARGET:.tns=.elf) $(TARGET)
+	rm -f *.o *.elf
+	rm -f $(DISTDIR)/$(EXE).tns
+	rm -f $(DISTDIR)/$(EXE).elf
+	rm -f $(DISTDIR)/$(EXE).prg.tns
